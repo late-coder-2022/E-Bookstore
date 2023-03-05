@@ -51,6 +51,8 @@ def init_db():
         db.commit()
 
 
+# This function is to help searching the database by different criteria like book id, book titles or book authors
+# to reduce duplicated coding and decrease the chance of making errors.
 def search_db(sch_field, sch_value):
 
     # Convert integer data type to string for passing it to "SELECT FROM TABLE WHERE LIKE %" statement
