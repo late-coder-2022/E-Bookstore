@@ -27,6 +27,9 @@ START
 END
 """
 import sqlite3
+from tabulate import tabulate
+
+headers = ["ID", "TITLE", "AUTHOR", "QTY"]
 
 
 def init_db():
@@ -38,7 +41,7 @@ def init_db():
     books_data = [(3001, 'A Tale of Two Cities', 'Charles Dickens', 30),
                   (3002, 'Harry Potter and the Philosopher\'s Stone', 'J.K. Rowling', 40),
                   (3003, 'The Lion, the Witch and the Wardrobe', 'C. S. Lewis', 25),
-                  (3004, 'The Lord of the Rings', 'J>R.R Tolkien', 37),
+                  (3004, 'The Lord of the Rings', 'J.R.R Tolkien', 37),
                   (3005, 'Alice in Wonderland', 'Lewis Carroll', 12)]
 
     # Load the data into the table if it is empty.
@@ -46,6 +49,20 @@ def init_db():
     if len(numb_record) == 0:
         cursor.executemany('''insert into books(id, title, author, qty) values(?,?,?,?)''', books_data)
         db.commit()
+
+
+def search_db(sch_field, sch_value):
+
+    # Convert integer data type to string for passing it to "SELECT FROM TABLE WHERE LIKE %" statement
+    if isinstance(sch_value, int):
+        sch_value = str(sch_value)
+
+    cursor.execute('''select * from books where %s like ?''' % sch_field, ('%' + sch_value + '%',))
+    search_result = cursor.fetchall()
+    if len(search_result) > 0:
+        print(tabulate(search_result, headers, tablefmt='grid'))
+    else:
+        print(f"\nNo matched for book {sch_field}")
 
 
 def add_book():
@@ -69,10 +86,10 @@ def add_book():
 
     # Let users confirm the information before the record is inserted.
     confirm = input(f"""
-Please confirm the information for the new book:
+Please confirm the input information:
 [Title]:\t{book_title}
 [Author]:\t{book_author}
-[Qty]:\t\t{book_qty}\n
+[Qty]:\t\t{book_qty}
 Y/N: """).lower()
     if confirm == 'y':
         cursor.execute('''insert into books(title, author, qty) values(?,?,?)''', (book_title, book_author, book_qty))
@@ -121,10 +138,19 @@ def upt_book():
                 print("\nBook Quantity Can't Be Less Than 0")
                 return
 
-        cursor.execute('''update books set title = ?, author = ?, qty = ? where id = ?''', (new_title, new_author,
-                                                                                            new_qty, chg_id,))
-        db.commit()
-        print(f"The book with id [{chg_id}] has been updated.")
+        # Let users confirm the information before the record is inserted.
+        confirm = input(f"""
+Please confirm the updated information:
+[Id]:\t\t{chg_id}
+[Title]:\t{new_title}
+[Author]:\t{new_author}
+[Qty]:\t\t{new_qty}
+Y/N: """).lower()
+        if confirm == 'y':
+            cursor.execute('''update books set title = ?, author = ?, qty = ? where id = ?''', (new_title, new_author,
+                                                                                                new_qty, chg_id,))
+            db.commit()
+            print("\nThe book has been updated.")
     else:
         print("\nNo Matched Book Id")
 
@@ -171,77 +197,36 @@ ba - back to main menu
 : """).lower()
 
     if search_opt == 'al':
-        result = cursor.execute('''select * from books''').fetchall()
-        if len(result) > 0:
-            print("\nCompleted Book List")
-            print("===================")
-            for row in result:
-                print(f"""
-[Id]:\t\t{row[0]}
-[Title]:\t{row[1]}
-[Author]:\t{row[2]}
-[Qty]:\t\t{row[3]}""")
+        search_result = cursor.execute('''select * from books''').fetchall()
+        if len(search_result) > 0:
+            print(tabulate(search_result, headers, tablefmt='grid'))
         else:
             print("No record found")
 
     elif search_opt == 'id':
+        search_field = 'id'
         try:
             search_key = int(input("\nPlease enter the book id: "))
         except ValueError:
             print("\nInvalid book id")
             return
-        search_key = str(search_key)
-        cursor.execute('''select * from books where id like ?''', ('%' + search_key + '%',))
-        search_result = cursor.fetchall()
-        if len(search_result) > 0:
-            for row in search_result:
-                print(f"""
-Matched Book Id
-===============
-[Id]:\t\t{row[0]}
-[Title]:\t{row[1]}
-[Author]:\t{row[2]}
-[Qty]:\t\t{row[3]}""")
-        else:
-            print("\nNo matched book id")
-            
+        search_db(search_field, search_key)
+
     elif search_opt == 'ti':
+        search_field = 'title'
         search_key = input("\nPlease enter the book title: ")
         if search_key == "":
             print("\nInput for book title was empty")
         else:
-            cursor.execute('''select * from books where title like ?''', ('%' + search_key + '%',))
-            search_result = cursor.fetchall()
-            if len(search_result) > 0:
-                for row in search_result:
-                    print(f"""
-Matched Book Title
-==================
-[Id]:\t\t{row[0]}
-[Title]:\t{row[1]}
-[Author]:\t{row[2]}
-[Qty]:\t\t{row[3]}""")
-            else:
-                print("\nNo matched book title")
+            search_db(search_field, search_key)
 
     elif search_opt == 'au':
+        search_field = 'author'
         search_key = input("\nPlease enter the book author: ")
         if search_key == "":
             print("\nInput for book author was empty")
         else:
-            cursor.execute('''select * from books where author like ?''', ('%'+search_key+'%',))
-            search_result = cursor.fetchall()
-            if len(search_result) > 0:
-                for row in search_result:
-                    print(f"""
-Matched Book Author
-===================
-[Id]:\t\t{row[0]}
-[Name]:\t\t{row[1]}
-[Author]:\t{row[2]}
-[Qty]:\t\t{row[3]}""")
-            else:
-                print("\nNo matched book author")
+            search_db(search_field, search_key)
 
     elif search_opt == 'ba':
         print("\nYou now back to the main menu")
