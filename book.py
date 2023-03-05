@@ -1,22 +1,23 @@
 """
-This is the capstone database project to create an ebookstore system. Users can add, change, delete and search
-books via the system.
+This is the capstone database project to create an ebookstore system. Bookstore clerks can add, change, delete and
+search books via the system.
 
-When using fetchall(), it will return "0" when the result set is empty. However, fetchone() will return
-"None" when the result set is empty. Therefore, it has to be careful in writing code to check for result set
-between fetchall() and fetchone().
+From working with this project, the following is learnt and considered.
 
-When designing the search options, normal situations is considered. For example, an option for user to list out all the
-books in the system when he/she has no idea what is in the system. For experience staff, they can use book id, title
+- When using fetchall(), it returns "0" when the result set is empty but fetchone() returns
+"None". Therefore, it has to be careful in writing code for these two functions.
+
+- When designing the search options, normal situations is considered. For example, an option for user to list out all
+the books in the system when he/she has no idea what is in the system. For experience staff, they can use book id, title
 or author as searching criteria to quickly located the book they want.
 
-As the "id" field in the books table is defined as INTEGER PRIMARY KEY (rowid), its value will be auto-incremented and
+- As the "id" field in the books table is defined as INTEGER PRIMARY KEY (rowid), its value will be auto-incremented and
 generated when a new record is added. Therefore, users only need to provide the value for the title, author and quantity
 field when adding new books.
 
-This program also allows users to double confirm before making change to the system as a friendly design.
+- Users are offered a chance to double confirm before making change to the database.
 
-Validation on user input are placed throughout the program to handle errors.
+- Define validation and checking on users' input throughout the program to handle predictable errors.
 
 START
 1. Create a database "ebookstore"
@@ -26,10 +27,17 @@ START
 5. Define specific functions for add, update, delete and search books.
 END
 """
+
 import sqlite3
 from tabulate import tabulate
 
+# Define global variables and dictionaries that are required for the main and function modules
 headers = ["ID", "TITLE", "AUTHOR", "QTY"]
+key_matching = {
+    "id": "id",
+    "ti": "title",
+    "au": "author"
+}
 
 
 def init_db():
@@ -40,7 +48,7 @@ def init_db():
 
     books_data = [(3001, 'A Tale of Two Cities', 'Charles Dickens', 30),
                   (3002, 'Harry Potter and the Philosopher\'s Stone', 'J.K. Rowling', 40),
-                  (3003, 'The Lion, the Witch and the Wardrobe', 'C. S. Lewis', 25),
+                  (3003, 'The Lion, the Witch and the Wardrobe', 'C.S. Lewis', 25),
                   (3004, 'The Lord of the Rings', 'J.R.R Tolkien', 37),
                   (3005, 'Alice in Wonderland', 'Lewis Carroll', 12)]
 
@@ -51,11 +59,12 @@ def init_db():
         db.commit()
 
 
-# This function is to help searching the database by different criteria like book id, book titles or book authors
-# to reduce duplicated coding and decrease the chance of making errors.
-def search_db(sch_field, sch_value):
+# This function is to search the information from the database based on different criteria like book id, book titles or
+# book authors entered by users. Implementing the code as function reduces duplicated coding and chances of errors.
+def search_db(sch_opt, sch_value):
 
-    # Convert integer data type to string for passing it to "SELECT FROM TABLE WHERE LIKE %" statement
+    sch_field = key_matching[sch_opt]
+    # Convert integer data type to string before passing to "SELECT FROM TABLE WHERE LIKE %" statement
     if isinstance(sch_value, int):
         sch_value = str(sch_value)
 
@@ -68,42 +77,42 @@ def search_db(sch_field, sch_value):
 
 
 def add_book():
-    print("\nPlease fill the information for the new book:\n")
 
-    book_title = input("The book title: ")
+    book_title = input("New book title: ")
     if book_title == "":
-        print("No input for title")
+        print("\nBook title was not entered")
         return
 
-    book_author = input("The book author: ")
+    book_author = input("New book author: ")
     if book_author == "":
-        print("No input for author")
+        print("\nBook author was not entered")
         return
 
     try:
-        book_qty = int(input("The book qty: "))
+        book_qty = int(input("New book qty: "))
     except ValueError:
-        print("Invalid input for quantity")
+        print("\nBook quantity was not valid")
         return
 
     # Let users confirm the information before the record is inserted.
     confirm = input(f"""
-Please confirm the input information:
+New book information
+====================
 [Title]:\t{book_title}
 [Author]:\t{book_author}
 [Qty]:\t\t{book_qty}
-Y/N: """).lower()
+Confirm to proceed (Y/N): """).lower()
     if confirm == 'y':
         cursor.execute('''insert into books(title, author, qty) values(?,?,?)''', (book_title, book_author, book_qty))
         db.commit()
-        print("\nThe book has been added.")
+        print("\nThe book is added")
 
 
 def upt_book():
 
     try:
         # Design to let users change their mind and leave the function.
-        chg_id = int(input("\nPlease enter the book id to update or 0 to back to main menu: "))
+        chg_id = int(input("\nPlease enter the book id to update or 0 to return to main menu: "))
         if chg_id == 0:
             return
     except ValueError:
@@ -115,7 +124,7 @@ def upt_book():
     cursor.execute('''select * from books where id = ?''', (chg_id,))
     result = cursor.fetchone()
 
-    # Verify if the record exists or leave this function.
+    # Only proceed if the record exists. Otherwise, leave this function.
     if result is not None:
 
         # Loop through all the fields for users to decide what fields need to be updated.
@@ -142,17 +151,18 @@ def upt_book():
 
         # Let users confirm the information before the record is inserted.
         confirm = input(f"""
-Please confirm the updated information:
+Updated book information
+========================
 [Id]:\t\t{chg_id}
 [Title]:\t{new_title}
 [Author]:\t{new_author}
 [Qty]:\t\t{new_qty}
-Y/N: """).lower()
+Confirm to proceed (Y/N): """).lower()
         if confirm == 'y':
             cursor.execute('''update books set title = ?, author = ?, qty = ? where id = ?''', (new_title, new_author,
                                                                                                 new_qty, chg_id,))
             db.commit()
-            print("\nThe book has been updated.")
+            print("\nThe book is updated")
     else:
         print("\nNo Matched Book Id")
 
@@ -161,7 +171,7 @@ def del_book():
 
     # As the book id is unique, it is the best to represent the book to be deleted.
     try:
-        del_id = int(input("\nPlease enter the id for the book you want to delete: "))
+        del_id = int(input("\nPlease enter the id of the book for delete: "))
     except ValueError:
         print("\nInvalid input for book id")
         return
@@ -171,15 +181,16 @@ def del_book():
     result = cursor.fetchone()
     if result is not None:
         confirm = input(f"""
-Please confirm to delete this book:
+Book to be deleted
+==================
 [Id]:\t\t{result[0]}
 [Title]:\t{result[1]}
 [Author]:\t{result[2]}
-: Y/N """).lower()
+Confirm to proceed (Y/N): """).lower()
         if confirm == 'y':
             cursor.execute('''delete from books where id = ?''', (del_id,))
             db.commit()
-            print(f"\nThe book record with id [{del_id}] has been successfully deleted")
+            print(f"\nThe book is deleted")
     else:
         print("\nInvalid book id")
 
@@ -203,32 +214,29 @@ ba - back to main menu
         if len(search_result) > 0:
             print(tabulate(search_result, headers, tablefmt='grid'))
         else:
-            print("No record found")
+            print("\nNo record found")
 
     elif search_opt == 'id':
-        search_field = 'id'
         try:
             search_key = int(input("\nPlease enter the book id: "))
         except ValueError:
             print("\nInvalid book id")
             return
-        search_db(search_field, search_key)
+        search_db(search_opt, search_key)
 
     elif search_opt == 'ti':
-        search_field = 'title'
         search_key = input("\nPlease enter the book title: ")
         if search_key == "":
-            print("\nInput for book title was empty")
+            print("\nBook title was not entered")
         else:
-            search_db(search_field, search_key)
+            search_db(search_opt, search_key)
 
     elif search_opt == 'au':
-        search_field = 'author'
         search_key = input("\nPlease enter the book author: ")
         if search_key == "":
-            print("\nInput for book author was empty")
+            print("\nBook author was not entered")
         else:
-            search_db(search_field, search_key)
+            search_db(search_opt, search_key)
 
     elif search_opt == 'ba':
         print("\nYou now back to the main menu")
@@ -244,14 +252,15 @@ cursor = db.cursor()
 # Create the books table and load data if necessary
 init_db()
 
-menu = """\nWelcome to the bookstore system! Please choose a task below:
+menu = """\nWelcome to the bookstore system! 
 
 1 - Enter book
 2 - Update book
 3 - Delete book
 4 - Search books
 0 - Exit
-: """
+
+Please choose an option: """
 
 while True:
 
@@ -273,11 +282,11 @@ while True:
 
         elif choice == 0:
             db.close()
-            print("Goodbye and have a nice day")
+            print("\nGoodbye and have a nice day")
             break
 
         else:
-            print("Invalid choice")
+            print("\nInvalid choice")
 
     except ValueError:
-        print("Invalid choice")
+        print("\nInvalid choice")
